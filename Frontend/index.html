@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Assistant</title>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Markdown Parser -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<!-- Code Highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Main Container */
+.chat-container {
+    width: 420px;
+    height: 680px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(18px);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Header */
+.header {
+    padding: 20px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 18px;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+}
+
+/* Chat Box */
+.chat-box {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Messages */
+.message {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    animation: fadeIn 0.3s ease-in-out;
+    word-wrap: break-word;
+}
+
+.user {
+    align-self: flex-end;
+    background: #6366f1;
+    color: white;
+}
+
+.bot {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.1);
+    color: #e2e8f0;
+}
+
+/* Markdown Styling */
+.message p { margin-bottom: 8px; }
+.message ul { padding-left: 18px; margin: 8px 0; }
+.message li { margin-bottom: 4px; }
+
+.message pre {
+    background: #0d1117;
+    padding: 10px;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-top: 8px;
+}
+
+.message code {
+    font-size: 13px;
+}
+
+/* Input Area */
+.input-area {
+    display: flex;
+    padding: 15px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+}
+
+input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 14px;
+}
+
+input::placeholder {
+    color: rgba(255,255,255,0.4);
+}
+
+button {
+    margin-left: 10px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 12px;
+    background: #6366f1;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+button:hover {
+    background: #4f46e5;
+}
+
+/* Typing Animation */
+.typing {
+    display: flex;
+    gap: 5px;
+}
+
+.typing span {
+    width: 6px;
+    height: 6px;
+    background: #cbd5e1;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+}
+
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+    <div class="header">🤖 AI Assistant</div>
+    <div id="chatBox" class="chat-box"></div>
+
+    <div class="input-area">
+        <input id="question" placeholder="Ask me anything..." />
+        <button onclick="askAI()">Send</button>
+    </div>
+</div>
+
+<script>
+
+const BASE_URL = "https://backend-vxgn.onrender.com";
+
+async function askAI() {
+
+    let input = document.getElementById("question");
+    let question = input.value.trim();
+    if (!question) return;
+
+    let chatBox = document.getElementById("chatBox");
+
+    addMessage(question, "user");
+    input.value = "";
+
+    let typing = document.createElement("div");
+    typing.className = "message bot";
+    typing.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        let res = await fetch(
+            `${BASE_URL}/ask?question=${encodeURIComponent(question)}`
+        );
+
+        let data = await res.json();
+        chatBox.removeChild(typing);
+
+        if (data.answer) {
+            addMessage(data.answer, "bot");
+        } else {
+            addMessage("⚠️ " + (data.error || "Unknown error"), "bot");
+        }
+
+    } catch (error) {
+        chatBox.removeChild(typing);
+        addMessage("⚠️ Server error. Please try again.", "bot");
+    }
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function addMessage(text, type) {
+    let msg = document.createElement("div");
+    msg.className = `message ${type}`;
+
+    if (type === "bot") {
+        msg.innerHTML = marked.parse(text);
+        setTimeout(() => {
+            document.querySelectorAll("pre code").forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }, 0);
+    } else {
+        msg.innerText = text;
+    }
+
+    document.getElementById("chatBox").appendChild(msg);
+}
+
+document.getElementById("question")
+.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        askAI();
+    }
+});
+
+</script>
+
+</body>
+</html>
